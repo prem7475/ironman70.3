@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #E10600;
+  --color-secondary: #000000;
+  --color-accent: #FFD700;
+  --color-hero-dark: #0A0A0A;
+  --color-hero-gray: #141414;
+  --color-card-bg: rgba(26, 26, 26, 0.6);
+
+  --font-ironman: "Titillium Web", sans-serif;
+
+  --animate-float: float 3s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+}
+
+:root {
+  --background: #050505;
+}
+
+body {
+  background-color: var(--background);
+  color: white;
+  font-family: var(--font-ironman);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .hero-button {
+    @apply relative px-8 py-3 font-black uppercase tracking-widest text-white transition-all duration-500
+           bg-primary hover:shadow-[0_0_30px_rgba(225,6,0,0.5)] rounded-md overflow-hidden active:scale-95;
+  }
+
+  .glass-card {
+    @apply bg-card-bg backdrop-blur-2xl border border-white/10 rounded-xl hover:border-primary/40
+           transition-all duration-700 shadow-2xl hover:shadow-primary/5;
+  }
+
+  .input-hero {
+    @apply w-full bg-black border border-white/10 p-4 rounded-xl focus:border-primary/40
+           focus:ring-1 focus:ring-primary/10 outline-none transition-all duration-500
+           text-white placeholder:text-gray-700 font-bold uppercase tracking-wider text-[11px];
+  }
+
+  .nav-link {
+    @apply relative text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300;
+  }
+
+  .nav-link::after {
+    @apply content-[''] absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300;
+  }
+
+  .nav-link:hover::after,
+  .nav-link.active::after {
+    @apply w-full;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+::-webkit-scrollbar-thumb {
+  background: #222;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #E10600;
+}
