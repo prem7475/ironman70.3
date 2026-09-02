@@ -1,35 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
-// Add middleware to verify JWT here
+const auth = require('../middleware/auth');
+const { getMe, upgradeMembership, updateHealthDetails, getVo2Max } = require('../controllers/user.controller');
+
+// Get Profile
+router.get('/me', auth, getMe);
+router.post('/membership', auth, upgradeMembership);
 
 // Update Health Details
-router.post('/health-details', async (req, res) => {
-  try {
-    const { userId, height, weight, age, gender } = req.body;
+router.post('/health-details', auth, updateHealthDetails);
 
-    const h = height / 100;
-    const bmi = (weight / (h * h)).toFixed(1);
-
-    const user = await User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          'healthDetails.height': height,
-          'healthDetails.weight': weight,
-          'healthDetails.age': age,
-          'healthDetails.gender': gender,
-          'healthDetails.bmi': bmi
-        }
-      },
-      { new: true }
-    );
-
-    res.json(user.healthDetails);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
-});
+// VO2 Max Estimation
+router.post('/vo2-max', auth, getVo2Max);
 
 module.exports = router;

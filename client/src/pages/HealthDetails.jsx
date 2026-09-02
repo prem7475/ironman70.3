@@ -1,12 +1,19 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, Scale, Ruler, ChevronRight, CheckCircle2,
   AlertCircle, User, Droplets, Utensils, Zap,
   Dumbbell, Moon, Info, ArrowRight, Target, ChevronDown
 } from 'lucide-react';
+import useStore from '../store/useStore';
+import { Link } from 'react-router-dom';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const HealthDetails = () => {
+  const user = useStore(state => state.user);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     heightCm: '',
@@ -20,6 +27,24 @@ const HealthDetails = () => {
     weightUnit: 'kg'  // 'kg' or 'lbs'
   });
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [vo2Message, setVo2Message] = useState('');
+  const [vo2Distance, setVo2Distance] = useState('');
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login?redirect=/health');
+      return;
+    }
+    const token = localStorage.getItem('paceforge_token');
+    fetch(`${API_URL}/user/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(response => response.ok ? response.json() : null)
+      .then(account => {
+        const health = account?.healthDetails;
+        if (!health) return;
+        setFormData(current => ({ ...current, name: account.name, heightCm: health.height || '', weightKg: health.weight || '', age: health.age || '', gender: health.gender || 'male' }));
+        if (health.bmi) setAnalysisResult({ bmi: health.bmi, status: health.bmiCategory || 'Normal', color: health.bmiCategory === 'Normal' ? 'text-green-400' : 'text-primary', name: account.name });
+      });
+  }, [user, navigate]);
 
   const calculateBMI = (e) => {
     e.preventDefault();
@@ -41,14 +66,14 @@ const HealthDetails = () => {
     }
 
     if (height > 0 && weight > 0) {
-      const bmiValue = (weight / (height * height)).toFixed(1);
+      const bmiValue = Number((weight / (height * height)).toFixed(2));
 
       let status = '';
       let color = '';
       if (bmiValue < 18.5) { status = 'Underweight'; color = 'text-blue-400'; }
-      else if (bmiValue >= 18.5 && bmiValue < 24.9) { status = 'Optimal'; color = 'text-green-400'; }
-      else if (bmiValue >= 25 && bmiValue < 29.9) { status = 'Overweight'; color = 'text-orange-400'; }
-      else { status = 'Obese'; color = 'text-primary'; }
+      else if (bmiValue < 25) { status = 'Normal'; color = 'text-green-400'; }
+      else if (bmiValue < 30) { status = 'Overweight'; color = 'text-orange-400'; }
+      else { status = 'Obesity'; color = 'text-primary'; }
 
       setAnalysisResult({
         bmi: bmiValue,
@@ -56,6 +81,8 @@ const HealthDetails = () => {
         color,
         name: formData.name || 'Athlete'
       });
+      const token = localStorage.getItem('paceforge_token');
+      fetch(`${API_URL}/user/health-details`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ height: formData.heightUnit === 'cm' ? Number(formData.heightCm) : height * 100, weight, age: formData.age, gender: formData.gender }) });
     }
   };
 
@@ -126,6 +153,8 @@ const HealthDetails = () => {
       }
     ];
   }, [analysisResult]);
+
+  if (user && user.membershipStatus !== 'ACTIVE') return <div className="pt-32 pb-20 min-h-screen max-w-2xl mx-auto px-6 text-center"><Activity className="text-primary mx-auto mb-6" size={64} /><p className="text-primary text-[10px] font-black uppercase tracking-[0.3em]">Premium athlete intelligence</p><h1 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter mt-3">Unlock your <span className="text-primary">metrics</span></h1><p className="text-gray-400 mt-5">BMI, VO2 Max, training plans, and athlete recommendations are included with the ₹4,999 yearly Forger membership.</p><Link to="/membership" className="hero-button inline-block mt-8">Become a Forger</Link></div>;
 
   return (
     <div className="pt-32 pb-20 container mx-auto px-6 font-ironman">
@@ -293,6 +322,9 @@ const HealthDetails = () => {
                   </span>
                 </button>
               </form>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mt-5">12-minute run distance (metres)<input type="number" min="500" max="6000" value={vo2Distance} onChange={event => setVo2Distance(event.target.value)} placeholder="E.G. 2400" className="input-hero mt-2 py-4" /></label>
+              <button type="button" onClick={async () => { const token = localStorage.getItem('paceforge_token'); const response = await fetch(`${API_URL}/user/vo2-max`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ distanceMeters: vo2Distance }) }); const data = await response.json(); setVo2Message(data.msg || `Estimated VO₂ Max: ${data.vo2Max} ml/kg/min`); }} className="hero-button w-full mt-4 py-4 text-[10px]">Update My VO₂ Max</button>
+              {vo2Message && <p className="text-xs text-gray-400 mt-4 uppercase tracking-widest">{vo2Message}</p>}
             </motion.div>
           </div>
 

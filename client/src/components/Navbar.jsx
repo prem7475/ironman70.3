@@ -4,6 +4,8 @@ import { User as UserIcon, LogIn, MapPin, ChevronDown, LogOut, Search, ShoppingB
 import { motion, AnimatePresence } from 'framer-motion';
 import useStore from '../store/useStore';
 
+import { CITIES } from '../constants';
+
 const Navbar = () => {
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [showSearchBar, setShowSearchBar] = useState(false);
@@ -14,13 +16,13 @@ const Navbar = () => {
 
   const navItems = [
     { name: 'Events', path: '/events' },
+    ...(user?.role === 'ADMIN' ? [{ name: 'Admin Races', path: '/admin/events' }] : []),
     { name: 'Training', path: '/health' },
-    { name: 'Become a Forger', path: '/register' },
+    { name: 'Wallet', path: user ? '/wallet' : '/login?redirect=/wallet' },
+    ...(user?.membershipStatus !== 'ACTIVE' ? [{ name: 'Become a Forger', path: '/membership' }] : []),
     { name: 'Results', path: user ? '/profile' : '/login?redirect=/profile' },
     { name: 'Shop', path: '/shop' },
   ];
-
-  const cities = ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune'];
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -55,7 +57,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="fixed top-0 w-full z-50 bg-black border-b border-white/5 font-ironman">
+    <nav className="fixed top-0 w-full z-50 bg-black/70 backdrop-blur-xl border-b border-white/5 font-ironman transition-all duration-300">
       <div className="bg-primary h-1 w-full"></div>
 
       <div className="container mx-auto px-6 h-20 flex justify-between items-center">
@@ -108,7 +110,7 @@ const Navbar = () => {
                     <span>Auto Detect</span>
                   </button>
                   <div className="border-t border-white/5 my-1"></div>
-                  {cities.map(city => (
+                  {CITIES.map(city => (
                     <button
                       key={city}
                       onClick={() => { setSelectedCity(city); setShowCityDropdown(false); }}
@@ -228,7 +230,7 @@ const Navbar = () => {
                     <MapPin size={14} />
                     <span>Auto Detect</span>
                   </button>
-                  {cities.map(city => (
+                  {CITIES.map(city => (
                     <button
                       key={city}
                       onClick={() => { setSelectedCity(city); setShowMobileMenu(false); }}

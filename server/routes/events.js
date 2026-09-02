@@ -1,43 +1,30 @@
 const express = require('express');
 const router = express.Router();
-const Event = require('../models/Event');
-const Ticket = require('../models/Ticket');
-const User = require('../models/User');
+const auth = require('../middleware/auth');
+const {
+  getEvents,
+  getEventsByCategory,
+  getEventsByCity,
+  getEvent,
+  createEvent,
+  updateEvent,
+  deleteEvent
+} = require('../controllers/event.controller');
 
-// Get all events
-router.get('/', async (req, res) => {
-  try {
-    const events = await Event.find().sort({ date: 1 });
-    res.json(events);
-  } catch (err) {
-    res.status(500).send('Server Error');
-  }
-});
+const admin = (req, res, next) => {
+  if (req.user?.role !== 'ADMIN') return res.status(403).json({ msg: 'Admin access required' });
+  next();
+};
 
-// Register for event
-router.post('/register', async (req, res) => {
-  try {
-    const { userId, eventId, registrationData } = req.body;
+// Public routes
+router.get('/', getEvents);
+router.get('/category/:category', getEventsByCategory);
+router.get('/city/:city', getEventsByCity);
+router.get('/:id', getEvent);
 
-    const ticketNumber = `PF-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-    const newTicket = new Ticket({
-      user: userId,
-      event: eventId,
-      ticketNumber,
-      customData: registrationData
-    });
-
-    await newTicket.save();
-
-    await User.findByIdAndUpdate(userId, {
-      $push: { registeredEvents: eventId }
-    });
-
-    res.json(newTicket);
-  } catch (err) {
-    res.status(500).send('Server Error');
-  }
-});
+// Admin routes
+router.post('/', auth, admin, createEvent);
+router.put('/:id', auth, admin, updateEvent);
+router.delete('/:id', auth, admin, deleteEvent);
 
 module.exports = router;

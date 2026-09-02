@@ -1,12 +1,20 @@
 import { create } from 'zustand';
 
 const useStore = create((set) => ({
-  user: null,
+  user: JSON.parse(localStorage.getItem('paceforge_user') || 'null'),
   selectedCity: 'Select City',
   cart: [],
   searchQuery: '',
-  setUser: (user) => set({ user }),
-  logout: () => set({ user: null }),
+  setUser: (user) => {
+    if (user) localStorage.setItem('paceforge_user', JSON.stringify(user));
+    else localStorage.removeItem('paceforge_user');
+    set({ user });
+  },
+  logout: () => {
+    localStorage.removeItem('paceforge_token');
+    localStorage.removeItem('paceforge_user');
+    set({ user: null });
+  },
   setSelectedCity: (city) => set({ selectedCity: city }),
   addToCart: (item) => set((state) => {
     const existingItem = state.cart.find((i) => i.id === item.id);

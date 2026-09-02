@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Ticket, History, Calendar, Settings, Award,
@@ -8,29 +9,41 @@ import {
 } from 'lucide-react';
 import useStore from '../store/useStore';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 const Profile = () => {
   const { user } = useStore();
   const navigate = useNavigate();
+  const [account, setAccount] = useState(user);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [walletBalance, setWalletBalance] = useState(0);
 
   useEffect(() => {
     if (!user) {
       navigate('/login?redirect=/profile');
+      return;
     }
+    const token = localStorage.getItem('paceforge_token');
+    fetch(`${API_URL}/user/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => data && setAccount(data));
+    fetch(`${API_URL}/registrations/my-races`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(response => response.ok ? response.json() : [])
+      .then(registrations => setUpcomingEvents(registrations.filter(registration => registration.status !== 'CANCELLED')));
+    fetch(`${API_URL}/wallet`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(response => response.ok ? response.json() : { walletBalance: 0 })
+      .then(data => setWalletBalance(data.walletBalance || 0));
   }, [user, navigate]);
 
   if (!user) return null;
-  const upcomingEvents = [
-    { id: 1, title: 'Mumbai Midnight Marathon', date: 'Sept 25, 2024', ticketId: 'PF-2024-001', category: 'Pro Run', color: 'from-primary/20 to-transparent' },
-  ];
+  const pastEvents = [];
 
-  const pastEvents = [
-    { id: 2, title: 'Summer Cycling Challenge', date: 'July 10, 2024', status: 'Completed', rank: '#12', time: '01:24:50' },
-  ];
-
+  const health = account?.healthDetails || {};
   const stats = [
-    { label: 'Conditioning', value: 85, icon: <Zap size={14}/> },
-    { label: 'Endurance', value: 62, icon: <TrendingUp size={14}/> },
-    { label: 'Metabolism', value: 78, icon: <Dna size={14}/> },
+    ['Height', health.height ? `${health.height} cm` : 'Not set'],
+    ['Weight', health.weight ? `${Number(health.weight).toFixed(1)} kg` : 'Not set'],
+    ['BMI', health.bmi || 'Not set'],
+    ['VO2 Max', health.vo2Max ? `${health.vo2Max} ml/kg/min` : 'Not set']
   ];
 
   return (
@@ -62,7 +75,7 @@ const Profile = () => {
           <div className="text-center lg:text-left flex-1 space-y-8">
             <div className="space-y-2">
               <div className="flex flex-col lg:flex-row lg:items-center justify-center lg:justify-start space-y-4 lg:space-y-0 lg:space-x-6">
-                <h1 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter leading-none">{user.name.split(' ')[0]} <span className="text-primary">{user.name.split(' ')[1] || ''}</span></h1>
+                <h1 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter leading-none">{account.name.split(' ')[0]} <span className="text-primary">{account.name.split(' ')[1] || ''}</span></h1>
                 <span className="bg-white/5 text-primary border border-primary/20 text-[10px] font-black px-6 py-2 rounded-full uppercase tracking-[0.3em] w-fit mx-auto lg:mx-0 backdrop-blur-md">
                   Elite Athlete
                 </span>
@@ -75,7 +88,7 @@ const Profile = () => {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                {[
-                 { label: 'BMI STATUS', val: '22.4', sub: 'OPTIMAL', color: 'text-green-500' },
+                 { label: 'BMI STATUS', val: account?.healthDetails?.bmi || '—', sub: account?.healthDetails?.bmiCategory || 'NOT SET', color: 'text-green-500' },
                  { label: 'GLOBAL RANK', val: '#1,240', sub: 'TOP 2%', color: 'text-primary' },
                  { label: 'TOTAL RACES', val: '14', sub: 'COMPLETED', color: 'text-white' },
                  { label: 'EXPERIENCE', val: 'LVL 24', sub: 'PRO TIER', color: 'text-primary' }
@@ -92,6 +105,13 @@ const Profile = () => {
       </motion.div>
 
       <div className="grid lg:grid-cols-3 gap-8">
+        <section className="lg:col-span-3 glass-card p-6 md:p-8 border-none">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div><p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Athlete profile</p><h2 className="text-2xl font-black uppercase italic tracking-tighter">Performance <span className="text-primary">Vitals</span></h2></div>
+            <Link to="/health" className="hero-button inline-flex items-center justify-center gap-2 px-5 py-3 text-[10px]"><Settings size={15} /> {health.height || health.weight || health.bmi ? 'Update metrics' : 'Add your metrics'}</Link>
+          </div>
+         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-7">{stats.map(([label, value]) => <div key={label} className="bg-black/40 border border-white/5 rounded-md p-4"><p className="text-[9px] font-black uppercase tracking-widest text-gray-500">{label}</p><p className="text-lg font-black italic mt-2">{value}</p></div>)}<Link to="/wallet" className="bg-primary/10 border border-primary/30 rounded-md p-4 hover:bg-primary/20"><p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Wallet</p><p className="text-lg font-black italic mt-2">₹{walletBalance.toLocaleString()}</p></Link></div>
+        </section>
         {/* Main Feed */}
         <div className="lg:col-span-2 space-y-10">
           {/* Active Passes */}
@@ -108,7 +128,7 @@ const Profile = () => {
             <div className="space-y-4">
               {upcomingEvents.map(event => (
                 <motion.div
-                  key={event.id}
+                  key={event.registrationId || event._id}
                   whileHover={{ y: -5, scale: 1.01 }}
                   className="glass-card p-6 flex flex-col md:flex-row justify-between items-center group cursor-pointer border-none bg-gradient-to-br from-white/5 to-transparent shadow-xl"
                 >
@@ -119,20 +139,20 @@ const Profile = () => {
                     </div>
                     <div>
                       <span className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-1 block">{event.category}</span>
-                      <h3 className="font-black uppercase italic text-xl mb-1">{event.title}</h3>
+                      <h3 className="font-black uppercase italic text-xl mb-1">{event.event?.title}</h3>
                       <div className="flex items-center space-x-4">
                         <p className="text-gray-500 text-[10px] font-black flex items-center uppercase tracking-widest">
-                          <Calendar size={12} className="mr-2 text-primary" /> {event.date}
+                          <Calendar size={12} className="mr-2 text-primary" /> {event.event?.date && new Date(event.event.date).toLocaleDateString('en-IN')}
                         </p>
                         <p className="text-gray-500 text-[10px] font-black flex items-center uppercase tracking-widest">
-                          <ShieldCheck size={12} className="mr-2 text-primary" /> ID: {event.ticketId}
+                          <ShieldCheck size={12} className="mr-2 text-primary" /> ID: {event.registrationId}
                         </p>
                       </div>
                     </div>
                   </div>
-                  <button className="hero-button py-3 px-8 text-[10px] shadow-2xl">
+                  <Link to={`/my-races/${event.registrationId}/ticket`} className="hero-button py-3 px-8 text-[10px] shadow-2xl">
                     Digital Entry
-                  </button>
+                  </Link>
                 </motion.div>
               ))}
             </div>

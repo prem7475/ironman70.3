@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#E10600', // Ironman Red (placeholder if logo colors unknown)
+        primary: '#E10600', // Primary brand accent
         secondary: '#000000',
         accent: '#FFD700',
       },

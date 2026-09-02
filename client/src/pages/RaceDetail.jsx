@@ -1,0 +1,33 @@
+import React, { useEffect, useState } from 'react';
+import { Calendar, ExternalLink, MapPin } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import useStore from '../store/useStore';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const RaceDetail = () => {
+  const { slug } = useParams();
+  const navigate = useNavigate();
+  const user = useStore(state => state.user);
+  const [race, setRace] = useState(null);
+  const [category, setCategory] = useState('');
+  const [distance, setDistance] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch(`${API_URL}/races/${encodeURIComponent(slug)}`).then(async response => { if (!response.ok) throw new Error('Race not found'); return response.json(); }).then(data => { setRace(data); setCategory(data.category); setDistance(data.distances?.[0] || ''); }).catch(err => setError(err.message));
+  }, [slug]);
+
+  const register = async event => {
+    event.preventDefault();
+    if (!user) return navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+    navigate('/race-registration', { state: { race, category, distance } });
+  };
+
+  if (error) return <div className="pt-32 pb-20 container mx-auto px-6 text-center"><h1 className="text-4xl font-black uppercase italic">{error}</h1><Link to="/races" className="hero-button inline-block mt-8">Back to Races</Link></div>;
+  if (!race) return <div className="pt-32 pb-20 container mx-auto px-6 text-center text-gray-500">Loading race...</div>;
+
+  return <div className="pt-24 pb-12 container mx-auto px-6"><div className="grid lg:grid-cols-3 gap-8"><div className="lg:col-span-2 glass-card overflow-hidden border-none"><div className="h-[350px] relative"><img src={race.imageUrl} alt={race.title} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex items-end p-8"><div><span className="bg-primary text-white text-[10px] font-black px-3 py-1 rounded-md uppercase italic tracking-widest">{race.category}</span><h1 className="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter leading-none mt-3">{race.title}</h1></div></div></div><div className="p-8"><div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 border-b border-white/5 pb-8"><div><p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Date</p><p className="font-bold text-sm flex items-center"><Calendar size={14} className="mr-2 text-primary" />{new Date(race.date).toLocaleDateString('en-IN', { dateStyle: 'long' })}</p></div><div><p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">City</p><p className="font-bold text-sm flex items-center"><MapPin size={14} className="mr-2 text-primary" />{race.location}</p></div><div><p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Fee</p><p className="font-black text-xl text-primary italic">₹{Number(race.price || 0).toLocaleString()}</p></div><div><p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Status</p><p className="font-bold text-sm uppercase">{race.status}</p></div></div><h3 className="text-white text-xl font-black uppercase italic mb-4">Race Details</h3><p className="leading-relaxed text-gray-400">{race.description}</p><p className="text-gray-400 mt-6"><strong className="text-white">Venue:</strong> {race.venue}<br /><strong className="text-white">Organizer:</strong> {race.organizer}<br /><strong className="text-white">Distances:</strong> {race.distances?.join(' / ')}</p>{race.registrationUrl && <a href={race.registrationUrl} target="_blank" rel="noreferrer" className="text-primary inline-flex items-center gap-2 mt-6 uppercase text-xs font-black">Official registration <ExternalLink size={14} /></a>}</div></div><div className="glass-card p-8 border-t-4 border-t-primary"><h2 className="text-2xl font-black uppercase italic mb-6">Book Now</h2><form onSubmit={register} className="space-y-5"><label className="block text-[10px] font-black uppercase tracking-widest text-gray-500">Category<select value={category} onChange={event => setCategory(event.target.value)} className="input-hero mt-2"><option value={race.category}>{race.category}</option></select></label><label className="block text-[10px] font-black uppercase tracking-widest text-gray-500">Distance<select value={distance} onChange={event => setDistance(event.target.value)} className="input-hero mt-2">{(race.distances || []).map(item => <option key={item}>{item}</option>)}</select></label><p className="text-gray-500 text-xs">Participant: <span className="text-white">{user?.name || 'Sign in to continue'}</span></p>{error && <p className="text-primary text-sm">{error}</p>}<button className="hero-button w-full">{user ? 'Confirm Booking' : 'Sign In to Book'}</button></form></div></div></div>;
+};
+
+export default RaceDetail;

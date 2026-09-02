@@ -1,0 +1,21 @@
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Trash2 } from 'lucide-react';
+import api from '../services/api';
+
+const cities = ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune'];
+const categories = ['Marathon', 'Cycling', 'Swimming', 'Triathlon', 'Duathlon', 'IRONMAN', 'HYROX', 'Devils Circuit'];
+const blank = { title: '', slug: '', date: '', location: 'Mumbai', venue: '', category: 'Marathon', organizer: '', price: '' };
+
+const AdminEvents = () => {
+  const [events, setEvents] = useState([]);
+  const [form, setForm] = useState(blank);
+  const [error, setError] = useState('');
+  const load = () => api.get('/events').then(response => setEvents(response.data)).catch(() => setError('Unable to load races.'));
+  useEffect(load, []);
+  const save = async event => { event.preventDefault(); setError(''); try { await api.post('/events', { ...form, date: new Date(form.date).toISOString(), price: Number(form.price || 0), venue: form.venue || form.location }); setForm(blank); load(); } catch (requestError) { setError(requestError.response?.data?.msg || 'Unable to add race.'); } };
+  const edit = async item => { const title = window.prompt('Race title', item.title); if (!title) return; const price = window.prompt('Price in INR', item.price || 0); try { await api.put(`/events/${item._id}`, { title, price: Number(price || 0) }); load(); } catch (requestError) { setError(requestError.response?.data?.msg || 'Unable to update race.'); } };
+  const remove = async id => { if (!window.confirm('Delete this race?')) return; try { await api.delete(`/events/${id}`); load(); } catch (requestError) { setError(requestError.response?.data?.msg || 'Unable to delete race.'); } };
+  return <div className="pt-28 pb-16 min-h-screen max-w-7xl mx-auto px-4"><Link to="/admin" className="text-primary text-[10px] font-black uppercase tracking-widest">Back to control room</Link><h1 className="text-5xl font-black uppercase italic tracking-tighter mt-5">Race <span className="text-primary">control</span></h1>{error && <p className="text-primary mt-5">{error}</p>}<form onSubmit={save} className="glass-card mt-8 p-6 grid md:grid-cols-2 lg:grid-cols-4 gap-4"><input required placeholder="Race title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="input-hero py-3"/><input required placeholder="Unique slug" value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })} className="input-hero py-3"/><input required type="datetime-local" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="input-hero py-3"/><input required placeholder="Organizer" value={form.organizer} onChange={e => setForm({ ...form, organizer: e.target.value })} className="input-hero py-3"/><input placeholder="Venue" value={form.venue} onChange={e => setForm({ ...form, venue: e.target.value })} className="input-hero py-3"/><input type="number" min="0" placeholder="Price INR" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} className="input-hero py-3"/><select value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} className="input-hero py-3">{cities.map(city => <option key={city}>{city}</option>)}</select><select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="input-hero py-3">{categories.map(category => <option key={category}>{category}</option>)}</select><button className="hero-button lg:col-span-4 py-3">Add race</button></form><div className="space-y-3 mt-8">{events.map(item => <div className="glass-card p-5 flex items-center justify-between" key={item._id}><div><p className="font-black uppercase italic">{item.title}</p><p className="text-xs text-gray-500">{item.category} · {item.location} · {item.price ? `₹${item.price}` : 'Official price'}</p></div><div className="flex gap-3"><button onClick={() => edit(item)} className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-primary">Edit</button><button onClick={() => remove(item._id)} className="text-gray-500 hover:text-primary" title="Delete race"><Trash2 size={17}/></button></div></div>)}</div></div>;
+};
+export default AdminEvents;
