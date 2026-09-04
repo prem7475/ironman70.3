@@ -13,6 +13,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const HealthDetails = () => {
   const user = useStore(state => state.user);
+  const setUser = useStore(state => state.setUser);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
@@ -36,13 +37,23 @@ const HealthDetails = () => {
       return;
     }
     const token = localStorage.getItem('paceforge_token');
+    if (!token) return;
     fetch(`${API_URL}/user/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(response => response.ok ? response.json() : null)
       .then(account => {
-        const health = account?.healthDetails;
+        if (!account) return;
+        const health = account.healthDetails;
         if (!health) return;
-        setFormData(current => ({ ...current, name: account.name, heightCm: health.height || '', weightKg: health.weight || '', age: health.age || '', gender: health.gender || 'male' }));
+        setFormData(current => ({ ...current, name: account.name || current.name, heightCm: health.height || '', weightKg: health.weight || '', age: health.age || '', gender: health.gender || 'male' }));
         if (health.bmi) setAnalysisResult({ bmi: health.bmi, status: health.bmiCategory || 'Normal', color: health.bmiCategory === 'Normal' ? 'text-green-400' : 'text-primary', name: account.name });
+      })
+      .catch(() => {
+        // Local offline fallback for user profile
+        const health = user.healthDetails;
+        if (health) {
+          setFormData(current => ({ ...current, name: user.name || current.name, heightCm: health.height || '', weightKg: health.weight || '', age: health.age || '', gender: health.gender || 'male' }));
+          if (health.bmi) setAnalysisResult({ bmi: health.bmi, status: health.bmiCategory || 'Normal', color: health.bmiCategory === 'Normal' ? 'text-green-400' : 'text-primary', name: user.name });
+        }
       });
   }, [user, navigate]);
 
@@ -79,10 +90,67 @@ const HealthDetails = () => {
         bmi: bmiValue,
         status,
         color,
-        name: formData.name || 'Athlete'
+        name: formData.name || user?.name || 'Athlete'
       });
+
+      // Update user state locally
+      const updatedUser = {
+        ...(user || {}),
+        healthDetails: {
+          ...(user?.healthDetails || {}),
+          height: formData.heightUnit === 'cm' ? Number(formData.heightCm) : height * 100,
+          weight,
+          age: formData.age,
+          gender: formData.gender,
+          bmi: bmiValue,
+          bmiCategory: status
+        }
+      };
+      setUser(updatedUser);
+
       const token = localStorage.getItem('paceforge_token');
-      fetch(`${API_URL}/user/health-details`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ height: formData.heightUnit === 'cm' ? Number(formData.heightCm) : height * 100, weight, age: formData.age, gender: formData.gender }) });
+      if (token) {
+        fetch(`${API_URL}/user/health-details`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ height: formData.heightUnit === 'cm' ? Number(formData.heightCm) : height * 100, weight, age: formData.age, gender: formData.gender })
+        }).catch(() => {});
+      }
+    }
+  };
+
+  const updateVo2Max = async () => {
+    const distanceMeters = Number(vo2Distance);
+    if (!distanceMeters || distanceMeters < 500 || distanceMeters > 6000) {
+      setVo2Message('Enter a valid 12-minute run distance (500m - 6000m)');
+      return;
+    }
+
+    const calculatedVo2 = Number(((distanceMeters - 504.9) / 44.73).toFixed(1));
+    setVo2Message(`Estimated VO₂ Max: ${calculatedVo2} ml/kg/min`);
+
+    const updatedUser = {
+      ...(user || {}),
+      healthDetails: {
+        ...(user?.healthDetails || {}),
+        vo2Max: calculatedVo2,
+        vo2MaxUpdatedAt: new Date().toISOString()
+      }
+    };
+    setUser(updatedUser);
+
+    const token = localStorage.getItem('paceforge_token');
+    if (token) {
+      fetch(`${API_URL}/user/vo2-max`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ distanceMeters: vo2Distance })
+      })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.vo2Max) setVo2Message(`Estimated VO₂ Max: ${data.vo2Max} ml/kg/min`);
+        })
+        .catch(() => {});
     }
   };
 
@@ -138,7 +206,7 @@ const HealthDetails = () => {
             diet: 'Surplus of 300-500 kcal. Quality carbs (Rice, Oats, Sweet Potato) + Lean proteins.',
             exercise: 'Hypertrophy specific (8-12 rep range). 5x Weekly. Minimal cardio.',
             protein: '2.2g/kg of body weight',
-            water: '4.5 Liters Daily',
+            water: '4 Liters Daily',
             details: 'Creatine monohydrate supplementation recommended (5g daily).'
           },
           {
@@ -154,7 +222,19 @@ const HealthDetails = () => {
     ];
   }, [analysisResult]);
 
-  if (user && user.membershipStatus !== 'ACTIVE') return <div className="pt-32 pb-20 min-h-screen max-w-2xl mx-auto px-6 text-center"><Activity className="text-primary mx-auto mb-6" size={64} /><p className="text-primary text-[10px] font-black uppercase tracking-[0.3em]">Premium athlete intelligence</p><h1 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter mt-3">Unlock your <span className="text-primary">metrics</span></h1><p className="text-gray-400 mt-5">BMI, VO2 Max, training plans, and athlete recommendations are included with the ₹4,999 yearly Forger membership.</p><Link to="/membership" className="hero-button inline-block mt-8">Become a Forger</Link></div>;
+  const isMember = user?.membershipStatus === 'ACTIVE' || user?.isMember || user?.membershipTier === 'PREMIUM';
+
+  if (user && !isMember) {
+    return (
+      <div className="pt-32 pb-20 min-h-screen max-w-2xl mx-auto px-6 text-center">
+        <Activity className="text-primary mx-auto mb-6" size={64} />
+        <p className="text-primary text-[10px] font-black uppercase tracking-[0.3em]">Premium athlete intelligence</p>
+        <h1 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter mt-3">Unlock your <span className="text-primary">metrics</span></h1>
+        <p className="text-gray-400 mt-5">BMI, VO2 Max, training plans, and athlete recommendations are included with the ₹4,999 yearly Forger membership.</p>
+        <Link to="/membership" className="hero-button inline-block mt-8">Become a Forger</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-32 pb-20 container mx-auto px-6 font-ironman">
@@ -322,8 +402,13 @@ const HealthDetails = () => {
                   </span>
                 </button>
               </form>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mt-5">12-minute run distance (metres)<input type="number" min="500" max="6000" value={vo2Distance} onChange={event => setVo2Distance(event.target.value)} placeholder="E.G. 2400" className="input-hero mt-2 py-4" /></label>
-              <button type="button" onClick={async () => { const token = localStorage.getItem('paceforge_token'); const response = await fetch(`${API_URL}/user/vo2-max`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ distanceMeters: vo2Distance }) }); const data = await response.json(); setVo2Message(data.msg || `Estimated VO₂ Max: ${data.vo2Max} ml/kg/min`); }} className="hero-button w-full mt-4 py-4 text-[10px]">Update My VO₂ Max</button>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mt-5">
+                12-minute run distance (metres)
+                <input type="number" min="500" max="6000" value={vo2Distance} onChange={event => setVo2Distance(event.target.value)} placeholder="E.G. 2400" className="input-hero mt-2 py-4" />
+              </label>
+              <button type="button" onClick={updateVo2Max} className="hero-button w-full mt-4 py-4 text-[10px]">
+                Update My VO₂ Max
+              </button>
               {vo2Message && <p className="text-xs text-gray-400 mt-4 uppercase tracking-widest">{vo2Message}</p>}
             </motion.div>
           </div>
