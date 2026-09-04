@@ -29,6 +29,7 @@ export const authService = {
 export const adminService = {
   getDashboard: () => api.get('/admin/dashboard'),
   getRegistrations: () => api.get('/admin/registrations'),
+  createUser: (data) => api.post('/admin/users', data),
   updateSettings: (data) => api.patch('/admin/settings', data),
   updateUser: (id, data) => api.patch(`/admin/users/${id}`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
