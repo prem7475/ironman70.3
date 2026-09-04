@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import useStore from '../store/useStore';
 import { generateRaceTicketPDF, getGoogleCalendarUrl, getVerificationUrl } from '../utils/ticket';
+import { getMockRegistrationById } from '../utils/mockStorage';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -17,19 +18,26 @@ const Ticket = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('paceforge_token');
-    if (!token) return setError('Please sign in to view this ticket.');
     fetch(`${API_URL}/registrations/${encodeURIComponent(registrationId)}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(async response => {
-        if (!response.ok) throw new Error((await response.json()).msg || 'Registration not found');
+        if (!response.ok) throw new Error('Registration not found on backend');
         return response.json();
       })
       .then(async data => {
         setRegistration(data);
         setQrCode(await QRCode.toDataURL(getVerificationUrl(data.registrationId), { margin: 2, width: 240 }));
       })
-      .catch(err => setError(err.message));
+      .catch(async () => {
+        const mockReg = getMockRegistrationById(registrationId);
+        if (mockReg) {
+          setRegistration(mockReg);
+          setQrCode(await QRCode.toDataURL(getVerificationUrl(mockReg.registrationId), { margin: 2, width: 240 }));
+        } else {
+          setError('Registration record not found.');
+        }
+      });
   }, [registrationId]);
 
   const downloadPdf = async () => {
