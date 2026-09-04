@@ -9,6 +9,7 @@ const EventSchema = new mongoose.Schema({
   venue: { type: String, required: true },
   category: { type: String, enum: ['Marathon', 'Cycling', 'Swimming', 'Triathlon', 'Duathlon', 'IRONMAN', 'HYROX', 'Devils Circuit'], required: true },
   distances: [{ type: String }],
+  distancePrices: { type: Map, of: Number }, // Dynamic price per distance e.g. { "5 KM": 600, "10 KM": 900, "21.1 KM": 1500, "42.2 KM": 2500 }
   organizer: { type: String, required: true },
   registrationDeadline: { type: Date },
   registrationUrl: { type: String },
@@ -21,7 +22,7 @@ const EventSchema = new mongoose.Schema({
   priceNote: { type: String },
   registrationDetails: {
     maxParticipants: { type: Number },
-    formFields: [String] // Custom fields for registration
+    formFields: [String]
   },
   createdAt: { type: Date, default: Date.now }
 });
