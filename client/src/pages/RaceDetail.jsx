@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Calendar, ExternalLink, MapPin } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import useStore from '../store/useStore';
+import { getFallbackRaceBySlug } from '../utils/fallbackRaces';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -15,7 +16,22 @@ const RaceDetail = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch(`${API_URL}/races/${encodeURIComponent(slug)}`).then(async response => { if (!response.ok) throw new Error('Race not found'); return response.json(); }).then(data => { setRace(data); setCategory(data.category); setDistance(data.distances?.[0] || ''); }).catch(err => setError(err.message));
+    fetch(`${API_URL}/races/${encodeURIComponent(slug)}`)
+      .then(async response => {
+        if (!response.ok) throw new Error('Race not found on backend');
+        return response.json();
+      })
+      .then(data => {
+        setRace(data);
+        setCategory(data.category);
+        setDistance(data.distances?.[0] || '');
+      })
+      .catch(() => {
+        const fallback = getFallbackRaceBySlug(slug);
+        setRace(fallback);
+        setCategory(fallback.category);
+        setDistance(fallback.distances?.[0] || '');
+      });
   }, [slug]);
 
   const register = async event => {
