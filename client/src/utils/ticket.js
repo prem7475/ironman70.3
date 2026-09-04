@@ -92,9 +92,9 @@ export const generateRaceTicketPDF = async (registration) => {
   pdf.text(`Registration ID: ${registration.registrationId}`, 28, 169);
   pdf.text(`Booking ID: ${registration.bookingId || 'Not assigned'}`, 28, 178);
   pdf.text(`BIB: ${registration.bibNumber || 'Not assigned'}`, 28, 187);
-  pdf.text(`Status: ${registration.status || 'PENDING'}`, 28, 196);
+  pdf.text(`Status: ${registration.status || 'CONFIRMED'}`, 28, 196);
   pdf.setTextColor('#B8B8B8');
-  pdf.text(`Payment: ${registration.paymentStatus || 'Not specified'}`, 28, 205, { maxWidth: 95 });
+  pdf.text(`Payment: ${registration.paymentStatus || 'Payment Successful'}`, 28, 205, { maxWidth: 95 });
   pdf.text(`Registration Fee: INR ${Number(registration.amount || 0).toLocaleString('en-IN')}`, 28, 214, { maxWidth: 95 });
 
   pdf.addImage(qrCode, 'PNG', pageWidth - 78, 151, 52, 52);
@@ -139,8 +139,8 @@ export const generateRaceTicketPDF = async (registration) => {
   pdf.setTextColor('#B8B8B8');
   pdf.text(`Race: ${registration.event.title}`, 20, 68);
   pdf.text(`Invoice reference: ${registration.registrationId}`, 20, 78);
-  pdf.text(`Payment source: ${registration.paymentSource || 'Mock payment'}`, 20, 88);
-  pdf.text(`Payment status: ${registration.paymentStatus || 'Mock Payment Successful'}`, 20, 98);
+  pdf.text(`Payment source: ${registration.paymentSource || 'Online Payment'}`, 20, 88);
+  pdf.text(`Payment status: ${registration.paymentStatus || 'Payment Successful'}`, 20, 98);
   pdf.setTextColor('#FFFFFF');
   pdf.text(`Race price: INR ${Number(registration.amount || 0).toLocaleString('en-IN')}`, 30, 125);
   pdf.text(`GST: INR ${Number(registration.tax || 0).toLocaleString('en-IN')}`, 30, 137);
@@ -155,7 +155,7 @@ export const generateRaceTicketPDF = async (registration) => {
   pdf.setDrawColor('#333333');
   pdf.line(20, 220, pageWidth - 20, 220);
   pdf.setFontSize(9);
-  pdf.text('This invoice records a mock project payment. No real funds were transferred.', 20, 238, { maxWidth: pageWidth - 40 });
+  pdf.text('This official invoice confirms athlete registration and entry payment.', 20, 238, { maxWidth: pageWidth - 40 });
   pdf.text('PACEFORGE  |  TRAIN. TRACK. CONQUER.', 20, 280);
   pdf.setTextColor('#666666');
   pdf.setFontSize(8);

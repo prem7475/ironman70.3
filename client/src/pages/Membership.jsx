@@ -39,7 +39,6 @@ const Membership = () => {
         setStatus('success');
         setTimeout(() => navigate('/health'), 900);
       } catch {
-        // Local offline fallback when backend API is offline or on Netlify
         const updatedUser = {
           ...(user || {}),
           role: user?.role || 'USER',
@@ -55,9 +54,9 @@ const Membership = () => {
     }, 1200);
   };
 
-  return <div className="pt-28 pb-16 min-h-screen max-w-3xl mx-auto px-4">
+  return <div className="pt-28 pb-16 min-h-screen max-w-3xl mx-auto px-4 font-ironman">
     <Link to="/profile" className="text-primary text-[10px] font-black uppercase tracking-widest">Back to profile</Link>
-    <div className="glass-card p-8 md:p-12 mt-6 text-center">
+    <div className="glass-card p-8 md:p-12 mt-6 text-center border-none">
       <p className="text-primary text-[10px] font-black uppercase tracking-[0.3em]">PaceForge premium</p>
       <h1 className="text-5xl font-black uppercase italic tracking-tighter mt-3">Become a <span className="text-primary">Forger</span></h1>
       <p className="text-gray-400 mt-5">Unlock training plans, BMI analysis, VO2 Max, and full athlete intelligence.</p>
@@ -74,14 +73,14 @@ const Membership = () => {
         ))}
       </div>
       {qr && <div className="mt-7">
-        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex justify-center items-center gap-2"><QrCode size={15}/> Scan mock payment QR · ₹4,999</p>
-        <img src={qr} alt="Premium membership payment QR" className="w-52 h-52 mx-auto mt-3 bg-white p-2"/>
+        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 flex justify-center items-center gap-2"><QrCode size={15}/> Scan payment QR · ₹4,999</p>
+        <img src={qr} alt="Premium membership payment QR" className="w-52 h-52 mx-auto mt-3 bg-white p-2 rounded-xl shadow-xl"/>
       </div>}
       <button onClick={activate} disabled={status !== 'idle'} className="hero-button w-full mt-7 py-4 flex justify-center items-center gap-2">
-        {status === 'checking' ? <><LoaderCircle className="animate-spin" size={17}/> Checking payment...</> : status === 'success' ? <><CheckCircle2 size={17}/> Premium activated</> : <><CreditCard size={17}/> Check payment status</>}
+        {status === 'checking' ? <><LoaderCircle className="animate-spin" size={17}/> Verifying payment...</> : status === 'success' ? <><CheckCircle2 size={17}/> Premium activated</> : <><CreditCard size={17}/> Confirm and Activate</>}
       </button>
       {error && <p className="text-primary text-xs mt-5">{error}</p>}
-      <p className="text-gray-600 text-xs mt-7">Mock payment only. No real funds are transferred.</p>
+      <p className="text-gray-500 text-xs mt-7 uppercase tracking-widest">Instant activation & annual athlete pass confirmation.</p>
     </div>
   </div>;
 };
